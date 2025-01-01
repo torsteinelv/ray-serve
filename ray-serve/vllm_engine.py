@@ -28,60 +28,41 @@ class Message(BaseModel):
         return self.content
 
 class GenerateRequest(BaseModel):
-    """Generate completion request.
-
-        prompt: Prompt to use for the generation
-        max_tokens: Maximum number of tokens to generate per output sequence.
-        temperature: Float that controls the randomness of the sampling. Lower
-            values make the model more deterministic, while higher values make
-            the model more random. Zero means greedy sampling.
-        messages: List of messages to use for the generation
-        """
     max_tokens: Optional[int] = 128
     temperature: Optional[float] = 0.7
     prompt: Optional[str]
     messages: Optional[List[Message]]
 
 class GenerateResponse(BaseModel):
-    """Generate completion response.
-        output: Model output
-        finish_reason: Reason the genertion has finished
-
-    """
     output: Optional[str]
     finish_reason: Optional[str]
     prompt: Optional[str]
 
-
-def _prepare_engine_args():
-    
+def _prepare_engine_args(num_gpus: int, tensor_parallel_size: int, model: str, dtype: str, trust_remote_code: bool):
     engine_args = AsyncEngineArgs(
-        model="microsoft/Phi-3-mini-4k-instruct",
-        trust_remote_code=True,
-        dtype="float16",
+        model=model,
+        trust_remote_code=trust_remote_code,
+        dtype=dtype,
+        tensor_parallel_size=tensor_parallel_size,  # Support tensor parallelism
     )
     return engine_args
 
-
-@serve.deployment(name='VLLMInference',
-                  num_replicas=1,
+@serve.deployment(name='VLLMInference', 
+                  num_replicas=1, 
                   max_concurrent_queries=256,
-                  ray_actor_options={"num_gpus": 1.0}
-                  )
+                  ray_actor_options={"num_gpus": 1.0}  # Set this as per GPU requirements
+                 )
 @serve.ingress(app)
 class VLLMInference:
-    def __init__(self, **kwargs):
+    def __init__(self, model: str, num_gpus: int, tensor_parallel_size: int, **kwargs):
         super().__init__(app)
-        self.args = AsyncEngineArgs(**kwargs)
+        self.args = _prepare_engine_args(num_gpus, tensor_parallel_size, model, dtype="float16", trust_remote_code=True)
         self.engine = AsyncLLMEngine.from_engine_args(self.args)
         self.tokenizer = self._prepare_tokenizer()
 
-    def _prepare_tokenizer(self,):
+    def _prepare_tokenizer(self):
         from transformers import AutoTokenizer
-        if self.args.trust_remote_code:
-            tokenizer = AutoTokenizer.from_pretrained(self.args.model, trust_remote_code=True)
-        else:
-            tokenizer = AutoTokenizer.from_pretrained(self.args.model)
+        tokenizer = AutoTokenizer.from_pretrained(self.args.model, trust_remote_code=True)
         return tokenizer
 
     @app.post("/generate", response_model=GenerateResponse)
@@ -90,7 +71,6 @@ class VLLMInference:
         try:
             generation_args = request.dict(exclude={'prompt', 'messages'})
             if generation_args is None:
-                # Default value
                 generation_args = {
                     "max_tokens": 500,
                     "temperature": 0.1,
@@ -99,7 +79,6 @@ class VLLMInference:
             if request.prompt:
                 prompt = request.prompt
             elif request.messages:
-
                 prompt = self.tokenizer.apply_chat_template(
                     request.messages,
                     tokenize=False,
@@ -109,9 +88,7 @@ class VLLMInference:
                 raise ValueError("Prompt or Messages is required")
 
             sampling_params = SamplingParams(**generation_args)
-
             request_id = self._next_request_id()
-            
             results_generator = self.engine.generate(prompt, sampling_params, request_id)
 
             final_result = None
@@ -143,7 +120,6 @@ class VLLMInference:
     async def health(self) -> Response:
         """Health check."""
         return Response(status_code=200)
-
 
 def deployment_llm(args: Dict[str, str]) -> Application:
     return VLLMInference.bind(**args)
