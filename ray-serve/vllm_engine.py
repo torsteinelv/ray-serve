@@ -1,5 +1,4 @@
 import os
-
 from typing import Dict, Optional, List
 import logging
 
@@ -113,6 +112,10 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
     engine_args.worker_use_ray = True
 
+    # Enable float16 if supported
+    if hasattr(engine_args, "dtype"):
+        engine_args.dtype = "float16"  # Set dtype to float16 if supported
+
     return VLLMDeployment.bind(
         engine_args,
         parsed_args.response_role,
@@ -122,4 +125,10 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
 
 
 model = build_app(
-    {"model": os.environ['MODEL_ID'], "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'], "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM']})
+    {
+        "model": os.environ['MODEL_ID'], 
+        "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'], 
+        "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM'],
+        "dtype": "float16"  # Add dtype to environment-based args
+    }
+)
