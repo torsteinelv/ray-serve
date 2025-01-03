@@ -1,4 +1,5 @@
 import os
+
 from typing import Dict, Optional, List
 import logging
 
@@ -35,17 +36,16 @@ class VLLMDeployment:
         lora_modules: Optional[List[LoRAModulePath]] = None,
         chat_template: Optional[str] = None,
     ):
+        # Löschen der Umgebungsvariable 'CUDA_VISIBLE_DEVICES'
+        #if 'CUDA_VISIBLE_DEVICES' in os.environ:
+        #    del os.environ['CUDA_VISIBLE_DEVICES']
+
         logger.info(f"Starting with engine args: {engine_args}")
         self.openai_serving_chat = None
         self.engine_args = engine_args
         self.response_role = response_role
         self.lora_modules = lora_modules
         self.chat_template = chat_template
-        
-        # Delete CUDA_VISIBLE_DEVICES if it exists to avoid conflicts
-        if 'CUDA_VISIBLE_DEVICES' in os.environ:
-            del os.environ['CUDA_VISIBLE_DEVICES']
-        
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
     @app.post("/v1/chat/completions")
@@ -96,13 +96,15 @@ def parse_vllm_args(cli_args: Dict[str, str]):
     config options we want to support.
     """
     parser = FlexibleArgumentParser(description="vLLM CLI")
-    parser = make_arg_parser(parser)
+    # Hier wird das Parsen der CLI-Argumente direkt durchgeführt, ohne rekursive Aufrufe
+    make_arg_parser(parser)  # oder eine passende Methode, um Argumente hinzuzufügen
     arg_strings = []
     for key, value in cli_args.items():
         arg_strings.extend([f"--{key}", str(value)])
     logger.info(arg_strings)
     parsed_args = parser.parse_args(args=arg_strings)
     return parsed_args
+
 
 
 def build_app(cli_args: Dict[str, str]) -> serve.Application:
@@ -117,10 +119,6 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
     engine_args.worker_use_ray = True
 
-    # Enable float16 if supported
-    if hasattr(engine_args, "dtype"):
-        engine_args.dtype = "float16"  # Set dtype to float16 if supported
-
     return VLLMDeployment.bind(
         engine_args,
         parsed_args.response_role,
@@ -130,10 +128,4 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
 
 
 model = build_app(
-    {
-        "model": os.environ['MODEL_ID'], 
-        "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'], 
-        "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM'],
-        "dtype": "float16"  # Add dtype to environment-based args
-    }
-)
+    {"model": os.environ['MODEL_ID'], "gpu-memory-utilization": os.environ['GPU_MEMORY_UTILIZATION'], "download-dir": os.environ['DOWNLOAD_DIR'], "max-model-len": os.environ['MAX_MODEL_LEN'], "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'], "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM']})
