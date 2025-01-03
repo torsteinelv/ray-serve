@@ -41,6 +41,11 @@ class VLLMDeployment:
         self.response_role = response_role
         self.lora_modules = lora_modules
         self.chat_template = chat_template
+        
+        # Delete CUDA_VISIBLE_DEVICES if it exists to avoid conflicts
+        if 'CUDA_VISIBLE_DEVICES' in os.environ:
+            del os.environ['CUDA_VISIBLE_DEVICES']
+        
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
     @app.post("/v1/chat/completions")
