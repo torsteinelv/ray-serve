@@ -114,7 +114,7 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
 
     # Enable float16 if supported
     if hasattr(engine_args, "dtype"):
-        engine_args.dtype = "half"  # Set dtype to float16 if supported
+        engine_args.dtype = "float"  # Set dtype to float16 if supported
 
     return VLLMDeployment.bind(
         engine_args,
@@ -129,6 +129,6 @@ model = build_app(
         "model": os.environ['MODEL_ID'], 
         "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'], 
         "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM'],
-        "dtype": "half"  # Add dtype to environment-based args
+        "dtype": "float"  # Add dtype to environment-based args
     }
 )
