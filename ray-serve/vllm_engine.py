@@ -127,6 +127,6 @@ model = build_app(
         "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'],
         "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM'],
         "download-dir": "/models",  # Sett cache-stien til din PVC
-        "trust_remote_code": "",
+        "trust_remote_code": None,
     }
 )
