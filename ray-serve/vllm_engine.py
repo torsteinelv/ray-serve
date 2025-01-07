@@ -121,12 +121,12 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     )
 
 
-model = build_app(
-    {
-        "model": os.environ['MODEL_ID'],
-        "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'],
-        "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM'],
-        "download-dir": "/models",  # Sett cache-stien til din PVC
-        "trust_remote_code": None,
-    }
-)
+#model = build_app(
+#    {
+#        "model": os.environ['MODEL_ID'],
+#        "tensor-parallel-size": os.environ['TENSOR_PARALLELISM'],
+#        "pipeline-parallel-size": os.environ['PIPELINE_PARALLELISM'],
+#        "download-dir": "/models",  # Sett cache-stien til din PVC
+#        "trust_remote_code": None,
+#    }
+#)
