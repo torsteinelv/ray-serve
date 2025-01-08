@@ -10,6 +10,9 @@ from vllm.engine.arg_utils import AsyncEngineArgs
 from vllm.engine.async_llm_engine import AsyncLLMEngine
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ChatCompletionResponse, ErrorResponse
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+from vllm.utils import FlexibleArgumentParser  # Legger til importen her
+
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 app = FastAPI()
 
