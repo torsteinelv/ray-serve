@@ -85,19 +85,14 @@ class VLLMDeployment:
 
 
 def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
-    """Parses vLLM args based on CLI inputs.
-
-    Currently uses argparse because vLLM doesn't expose Python models for all of the
-    config options we want to support.
-    """
     parser = FlexibleArgumentParser(description="vLLM CLI")
     parser = make_arg_parser(parser)
     arg_strings = []
     for key, value in cli_args.items():
-        if value is None:
-            arg_strings.append(f"--{key}")  # Add flag without value
-        else:
+        if value is not None:  # Skip None values
             arg_strings.extend([f"--{key}", str(value)])
+        else:
+            logger.info(f"Skipping argument: --{key} because its value is None")
     logger.info(arg_strings)
     parsed_args = parser.parse_args(args=arg_strings)
     return parsed_args
