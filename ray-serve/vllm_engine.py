@@ -103,6 +103,7 @@ def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
             arg_strings.extend([f"--{key}", str(value)])
             logger.info(f"Added argument: --{key} with value: {value}")
         else:
+            arg_strings.append(f"--{key}")
             # Dette skjer hvis argumentet er None eller 'None'
             logger.info(f"Skipping argument: --{key} because its value is {value}")
     
