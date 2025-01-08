@@ -89,11 +89,14 @@ def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
     parser = make_arg_parser(parser)
     arg_strings = []
     for key, value in cli_args.items():
-        if value is not None:  # Skip None values
+        if value is not None:  # Legg til verdibaserte argumenter
             arg_strings.extend([f"--{key}", str(value)])
+        elif value is None and key in ["enforce_eager", "trust_remote_code"]:
+            # Legg til flagg uten verdi
+            arg_strings.append(f"--{key}")
         else:
             logger.info(f"Skipping argument: --{key} because its value is None")
-    logger.info(arg_strings)
+    logger.info(f"Parsed arguments: {arg_strings}")
     parsed_args = parser.parse_args(args=arg_strings)
     return parsed_args
 
