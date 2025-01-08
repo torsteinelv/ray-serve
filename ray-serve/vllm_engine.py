@@ -20,6 +20,8 @@ from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_engine import LoRAModulePath
 from vllm.utils import FlexibleArgumentParser
 
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+
 logger = logging.getLogger("ray.serve")
 
 app = FastAPI()
