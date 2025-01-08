@@ -85,37 +85,64 @@ class VLLMDeployment:
 
 
 def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
+    # Logg inngangsargumentene
+    logger.info(f"Initial CLI arguments: {cli_args}")
+    
+    # Opprett parser
     parser = FlexibleArgumentParser(description="vLLM CLI")
     parser = make_arg_parser(parser)
+    
     arg_strings = []
     for key, value in cli_args.items():
-        if value is not None:  # Legg til verdibaserte argumenter
-            arg_strings.extend([f"--{key}", str(value)])
-        elif value is None and key in ["enforce_eager", "trust_remote_code"]:
-            # Legg til flagg uten verdi
+        logger.info(f"Processing argument: --{key} with value: {value}")
+        
+        if value is True:  # Håndter boolske flagg satt til True
             arg_strings.append(f"--{key}")
+            logger.info(f"Added argument: --{key} (boolean flag)")
+        elif value not in (None, "None"):  # Ignorer None eller 'None' som streng
+            arg_strings.extend([f"--{key}", str(value)])
+            logger.info(f"Added argument: --{key} with value: {value}")
         else:
-            logger.info(f"Skipping argument: --{key} because its value is None")
-    logger.info(f"Parsed arguments: {arg_strings}")
+            # Dette skjer hvis argumentet er None eller 'None'
+            logger.info(f"Skipping argument: --{key} because its value is {value}")
+    
+    # Logg de ferdig prosesserte argumentene før parsing
+    logger.info(f"Final argument list to be parsed: {arg_strings}")
+    
     parsed_args = parser.parse_args(args=arg_strings)
+    
+    # Logg de parsed argumentene
+    logger.info(f"Parsed arguments: {parsed_args}")
+    
     return parsed_args
 
-
 def build_app(cli_args: Dict[str, Optional[str]]) -> serve.Application:
-    """Builds the Serve app based on CLI arguments.
-
-    See https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html#command-line-arguments-for-the-server
-    for the complete set of arguments.
-
-    Supported engine arguments: https://docs.vllm.ai/en/latest/models/engine_args.html.
-    """  # noqa: E501
+    """Builds the Serve app based on CLI arguments."""
+    
+    # Logg start av build_app
+    logger.info(f"Building the application with CLI arguments: {cli_args}")
+    
     parsed_args = parse_vllm_args(cli_args)
+    
+    # Logg parsed_args
+    logger.info(f"Parsed engine arguments: {parsed_args}")
+    
+    # Lag AsyncEngineArgs
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
+    
+    # Logg engine_args
+    logger.info(f"Engine arguments after parsing: {engine_args}")
+    
+    # Sett worker_use_ray til True for Ray integrasjon
     engine_args.worker_use_ray = True
-
+    
+    # Logg opprettelsen av VLLMDeployment
+    logger.info(f"Binding VLLMDeployment with engine args: {engine_args} and response_role: {parsed_args.response_role}")
+    
+    # Returner bindet VLLMDeployment
     return VLLMDeployment.bind(
         engine_args,
         parsed_args.response_role,
-#        parsed_args.lora_modules,
+        # parsed_args.lora_modules,
         parsed_args.chat_template,
     )
