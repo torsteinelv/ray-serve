@@ -17,7 +17,7 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.serving_engine import LoRAModulePath
+#from vllm.entrypoints.openai.serving_engine import LoRAModulePath
 from vllm.utils import FlexibleArgumentParser
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
@@ -34,14 +34,14 @@ class VLLMDeployment:
         self,
         engine_args: AsyncEngineArgs,
         response_role: str,
-        lora_modules: Optional[List[LoRAModulePath]] = None,
+#        lora_modules: Optional[List[LoRAModulePath]] = None,
         chat_template: Optional[str] = None,
     ):
         logger.info(f"Starting with engine args: {engine_args}")
         self.openai_serving_chat = None
         self.engine_args = engine_args
         self.response_role = response_role
-        self.lora_modules = lora_modules
+#        self.lora_modules = lora_modules
         self.chat_template = chat_template
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
@@ -66,7 +66,7 @@ class VLLMDeployment:
                 model_config,
                 served_model_names=served_model_names,
                 response_role=self.response_role,
-                lora_modules=self.lora_modules,
+#                lora_modules=self.lora_modules,
                 chat_template=self.chat_template,
                 prompt_adapters=None,
                 request_logger=None,
