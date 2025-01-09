@@ -16,7 +16,7 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
+from vllm.entrypoints.openai.serving_engine import PromptAdapterPath
 from vllm.utils import FlexibleArgumentParser
 from vllm.entrypoints.logger import RequestLogger
 logger = logging.getLogger("ray.serve")
@@ -38,7 +38,7 @@ class VLLMDeployment:
         self,
         engine_args: AsyncEngineArgs,
         response_role: str,
-        lora_modules: Optional[List[LoRAModulePath]] = None,
+#        lora_modules: Optional[List[LoRAModulePath]] = None,
         prompt_adapters: Optional[List[PromptAdapterPath]] = None,
         request_logger: Optional[RequestLogger] = None,
         chat_template: Optional[str] = None,
@@ -47,7 +47,7 @@ class VLLMDeployment:
         self.openai_serving_chat = None
         self.engine_args = engine_args
         self.response_role = response_role
-        self.lora_modules = lora_modules
+#        self.lora_modules = lora_modules
         self.prompt_adapters = prompt_adapters
         self.request_logger = request_logger
         self.chat_template = chat_template
@@ -74,7 +74,7 @@ class VLLMDeployment:
                 model_config,
                 served_model_names,
                 self.response_role,
-                lora_modules=self.lora_modules,
+#                lora_modules=self.lora_modules,
                 prompt_adapters=self.prompt_adapters,
                 request_logger=self.request_logger,
                 chat_template=self.chat_template,
@@ -123,7 +123,7 @@ def build_app(cli_args: Dict[str, Optional[str]]) -> serve.Application:
     return VLLMDeployment.bind(
         engine_args,
         parsed_args.response_role,
-        parsed_args.lora_modules,
+#        parsed_args.lora_modules,
         parsed_args.prompt_adapters,
         cli_args.get("request_logger"),
         parsed_args.chat_template,
