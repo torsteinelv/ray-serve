@@ -24,14 +24,6 @@ logger = logging.getLogger("ray.serve")
 app = FastAPI()
 
 
-@serve.deployment(
-    autoscaling_config={
-        "min_replicas": 1,
-        "max_replicas": 10,
-        "target_ongoing_requests": 5,
-    },
-    max_ongoing_requests=10,
-)
 @serve.ingress(app)
 class VLLMDeployment:
     def __init__(
