@@ -1,4 +1,3 @@
-import os
 from typing import Dict, Optional, List
 import logging
 
@@ -17,30 +16,44 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
+from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
 from vllm.utils import FlexibleArgumentParser
-
+from vllm.entrypoints.logger import RequestLogger
 logger = logging.getLogger("ray.serve")
 
 app = FastAPI()
 
 
-@serve.deployment(name="VLLMDeployment")
+@serve.deployment(
+    autoscaling_config={
+        "min_replicas": 1,
+        "max_replicas": 10,
+        "target_ongoing_requests": 5,
+    },
+    max_ongoing_requests=10,
+)
 @serve.ingress(app)
 class VLLMDeployment:
     def __init__(
         self,
         engine_args: AsyncEngineArgs,
         response_role: str,
+        lora_modules: Optional[List[LoRAModulePath]] = None,
+        prompt_adapters: Optional[List[PromptAdapterPath]] = None,
+        request_logger: Optional[RequestLogger] = None,
         chat_template: Optional[str] = None,
     ):
         logger.info(f"Starting with engine args: {engine_args}")
         self.openai_serving_chat = None
         self.engine_args = engine_args
         self.response_role = response_role
+        self.lora_modules = lora_modules
+        self.prompt_adapters = prompt_adapters
+        self.request_logger = request_logger
         self.chat_template = chat_template
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
-    @app.post("/v1/completions")
+    @app.post("/v1/chat/completions")
     async def create_chat_completion(
         self, request: ChatCompletionRequest, raw_request: Request
     ):
@@ -59,12 +72,12 @@ class VLLMDeployment:
             self.openai_serving_chat = OpenAIServingChat(
                 self.engine,
                 model_config,
-                served_model_names=served_model_names,
-                response_role=self.response_role,
-#                lora_modules=self.lora_modules,
+                served_model_names,
+                self.response_role,
+                lora_modules=self.lora_modules,
+                prompt_adapters=self.prompt_adapters,
+                request_logger=self.request_logger,
                 chat_template=self.chat_template,
-                prompt_adapters=None,
-                request_logger=None,
             )
         logger.info(f"Request: {request}")
         generator = await self.openai_serving_chat.create_chat_completion(
