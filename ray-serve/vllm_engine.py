@@ -24,6 +24,7 @@ logger = logging.getLogger("ray.serve")
 app = FastAPI()
 
 
+@serve.deployment(name="VLLMDeployment")
 @serve.ingress(app)
 class VLLMDeployment:
     def __init__(
