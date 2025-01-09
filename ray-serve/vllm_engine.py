@@ -41,7 +41,7 @@ class VLLMDeployment:
         self.engine_args = engine_args
         self.response_role = response_role
 #        self.lora_modules = lora_modules
-        self.prompt_adapters = prompt_adapters
+#        self.prompt_adapters = prompt_adapters
         self.request_logger = request_logger
         self.chat_template = chat_template
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
