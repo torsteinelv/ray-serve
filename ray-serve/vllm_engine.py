@@ -132,12 +132,7 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
     engine_args.worker_use_ray = True
 
-    tp = engine_args.tensor_parallel_size
-    logger.info(f"Tensor parallelism = {tp}")
-    pg_resources = []
-    pg_resources.append({"CPU": 1})  # for the deployment replica
-    for i in range(tp):
-        pg_resources.append({"CPU": 1, accelerator: 1})  # for the vLLM actors
+
 
     # We use the "STRICT_PACK" strategy below to ensure all vLLM actors are placed on
     # the same Ray node.
