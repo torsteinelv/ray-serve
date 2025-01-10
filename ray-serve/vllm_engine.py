@@ -1,3 +1,5 @@
+import os
+
 from typing import Dict, Optional, List
 import logging
 
@@ -16,9 +18,9 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
+from vllm.entrypoints.openai.serving_engine import LoRAModulePath
 from vllm.utils import FlexibleArgumentParser
-from vllm.entrypoints.logger import RequestLogger
+
 logger = logging.getLogger("ray.serve")
 
 app = FastAPI()
@@ -32,8 +34,6 @@ class VLLMDeployment:
         engine_args: AsyncEngineArgs,
         response_role: str,
         lora_modules: Optional[List[LoRAModulePath]] = None,
-        prompt_adapters: Optional[List[PromptAdapterPath]] = None,
-        request_logger: Optional[RequestLogger] = None,
         chat_template: Optional[str] = None,
     ):
         logger.info(f"Starting with engine args: {engine_args}")
@@ -41,8 +41,6 @@ class VLLMDeployment:
         self.engine_args = engine_args
         self.response_role = response_role
         self.lora_modules = lora_modules
-        self.prompt_adapters = prompt_adapters
-        self.request_logger = request_logger
         self.chat_template = chat_template
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
 
@@ -65,12 +63,12 @@ class VLLMDeployment:
             self.openai_serving_chat = OpenAIServingChat(
                 self.engine,
                 model_config,
-                served_model_names,
-                self.response_role,
+                served_model_names=served_model_names,
+                response_role=self.response_role,
                 lora_modules=self.lora_modules,
-                prompt_adapters=self.prompt_adapters,
-                request_logger=self.request_logger,
                 chat_template=self.chat_template,
+                prompt_adapters=None,
+                request_logger=None,
             )
         logger.info(f"Request: {request}")
         generator = await self.openai_serving_chat.create_chat_completion(
@@ -85,7 +83,6 @@ class VLLMDeployment:
         else:
             assert isinstance(generator, ChatCompletionResponse)
             return JSONResponse(content=generator.model_dump())
-
 
 def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
     
@@ -108,16 +105,21 @@ def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
     
     return parsed_args
 
-def build_app(cli_args: Dict[str, Optional[str]]) -> serve.Application:
+def build_app(cli_args: Dict[str, str]) -> serve.Application:
+    """Builds the Serve app based on CLI arguments.
+
+    See https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html#command-line-arguments-for-the-server
+    for the complete set of arguments.
+
+    Supported engine arguments: https://docs.vllm.ai/en/latest/models/engine_args.html.
+    """  # noqa: E501
     parsed_args = parse_vllm_args(cli_args)
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
     engine_args.worker_use_ray = True
-    
+
     return VLLMDeployment.bind(
         engine_args,
         parsed_args.response_role,
-        cli_args.get("request_logger"),
-        parsed_args.chat_template,
         parsed_args.lora_modules,
-        parsed_args.prompt_adapters,
+        parsed_args.chat_template,
     )
