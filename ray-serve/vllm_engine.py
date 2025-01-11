@@ -95,26 +95,24 @@ class VLLMDeployment:
             return JSONResponse(content=generator.model_dump())
 
 
-def parse_vllm_args(cli_args: Dict[str, Optional[str]]):
-    
-    # Opprett parser
-    parser = FlexibleArgumentParser(description="vLLM CLI")
-    parser = make_arg_parser(parser)
-    
+def parse_vllm_args(cli_args: Dict[str, str]):
+    """Parses vLLM args based on CLI inputs.
+
+    Currently uses argparse because vLLM doesn't expose Python models for all of the
+    config options we want to support.
+    """
+    arg_parser = FlexibleArgumentParser(
+        description="vLLM OpenAI-Compatible RESTful API server."
+    )
+
+    parser = make_arg_parser(arg_parser)
     arg_strings = []
     for key, value in cli_args.items():
-        logger.info(f"Processing argument: --{key} with value: {value}")
-        
-        if value is True:  # Håndter boolske flagg satt til True
-            arg_strings.append(f"--{key}")
-        elif value not in (None, "None"):  # Ignorer None eller 'None' som streng
-            arg_strings.extend([f"--{key}", str(value)])
-        else:
-            arg_strings.append(f"--{key}")
-
+        arg_strings.extend([f"--{key}", str(value)])
+    logger.info(arg_strings)
     parsed_args = parser.parse_args(args=arg_strings)
-    
     return parsed_args
+
 
 def build_app(cli_args: Dict[str, str]) -> serve.Application:
     """Builds the Serve app based on CLI arguments.
@@ -124,14 +122,30 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
 
     Supported engine arguments: https://docs.vllm.ai/en/latest/models/engine_args.html.
     """  # noqa: E501
+    if "accelerator" in cli_args.keys():
+        accelerator = cli_args.pop("accelerator")
+    else:
+        accelerator = "GPU"
     parsed_args = parse_vllm_args(cli_args)
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
     engine_args.worker_use_ray = True
 
-    return VLLMDeployment.bind(
+    tp = engine_args.tensor_parallel_size
+    logger.info(f"Tensor parallelism = {tp}")
+    pg_resources = []
+    pg_resources.append({"CPU": 1})  # for the deployment replica
+    for i in range(tp):
+        pg_resources.append({"CPU": 1, accelerator: 1})  # for the vLLM actors
+
+    # We use the "STRICT_PACK" strategy below to ensure all vLLM actors are placed on
+    # the same Ray node.
+    return VLLMDeployment.options(
+        placement_group_bundles=pg_resources, placement_group_strategy="STRICT_PACK"
+    ).bind(
         engine_args,
         parsed_args.response_role,
         parsed_args.lora_modules,
+        parsed_args.prompt_adapters,
         cli_args.get("request_logger"),
         parsed_args.chat_template,
     )
