@@ -108,9 +108,17 @@ def parse_vllm_args(cli_args: Dict[str, str]):
     parser = make_arg_parser(arg_parser)
     arg_strings = []
     for key, value in cli_args.items():
-        arg_strings.extend([f"--{key}", str(value)])
-    logger.info(arg_strings)
+        logger.info(f"Processing argument: --{key} with value: {value}")
+        
+        if value is True:  # Håndter boolske flagg satt til True
+            arg_strings.append(f"--{key}")
+        elif value not in (None, "None"):  # Ignorer None eller 'None' som streng
+            arg_strings.extend([f"--{key}", str(value)])
+        else:
+            arg_strings.append(f"--{key}")
+
     parsed_args = parser.parse_args(args=arg_strings)
+    
     return parsed_args
 
 
