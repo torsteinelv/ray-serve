@@ -73,7 +73,7 @@ class VLLMDeployment:
             self.openai_serving_chat = OpenAIServingChat(
                 self.engine,
                 model_config,
-                served_model_names=served_model_names,
+                served_model_names,
                 self.response_role,
                 lora_modules=self.lora_modules,
                 prompt_adapters=self.prompt_adapters,
@@ -132,7 +132,6 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
         engine_args,
         parsed_args.response_role,
         parsed_args.lora_modules,
-        parsed_args.prompt_adapters,
         cli_args.get("request_logger"),
         parsed_args.chat_template,
     )
