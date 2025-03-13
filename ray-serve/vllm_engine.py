@@ -111,7 +111,7 @@ def parse_vllm_args(cli_args: Dict[str, str]):
     arg_strings = []
     for key, value in cli_args.items():
         logger.info(f"Processing argument: --{key} with value: {value}")
-        
+
         if value is True:  # Håndter boolske flagg satt til True
             arg_strings.append(f"--{key}")
         elif value not in (None, "None"):  # Ignorer None eller 'None' som streng
@@ -120,7 +120,7 @@ def parse_vllm_args(cli_args: Dict[str, str]):
             arg_strings.append(f"--{key}")
 
     parsed_args = parser.parse_args(args=arg_strings)
-    
+
     return parsed_args
 
 
@@ -137,7 +137,9 @@ def build_app(cli_args: Dict[str, str]) -> serve.Application:
     else:
         accelerator = "GPU"
     parsed_args = parse_vllm_args(cli_args)
+    logger.info(f"Parsed args: {parsed_args}") # ADDED LOGGING
     engine_args = AsyncEngineArgs.from_cli_args(parsed_args)
+    logger.info(f"Engine args: {engine_args}") # ADDED LOGGING
     engine_args.worker_use_ray = True
 
     tp = engine_args.tensor_parallel_size
