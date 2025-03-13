@@ -1,3 +1,5 @@
+import os
+
 from typing import Dict, Optional, List
 import logging
 
@@ -16,7 +18,6 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
-#from vllm.entrypoints.openai.serving_models import LoRAModulePath, PromptAdapterPath
 from vllm.entrypoints.openai.serving_engine import LoRAModulePath, PromptAdapterPath
 from vllm.utils import FlexibleArgumentParser
 from vllm.entrypoints.logger import RequestLogger
@@ -26,14 +27,7 @@ logger = logging.getLogger("ray.serve")
 app = FastAPI()
 
 
-@serve.deployment(
-    autoscaling_config={
-        "min_replicas": 1,
-        "max_replicas": 10,
-        "target_ongoing_requests": 5,
-    },
-    max_ongoing_requests=10,
-)
+@serve.deployment(name="VLLMDeployment")
 @serve.ingress(app)
 class VLLMDeployment:
     def __init__(
@@ -80,7 +74,6 @@ class VLLMDeployment:
                 prompt_adapters=self.prompt_adapters,
                 request_logger=self.request_logger,
                 chat_template=self.chat_template,
-                chat_template_content_format='auto'
             )
         logger.info(f"Request: {request}")
         generator = await self.openai_serving_chat.create_chat_completion(
@@ -95,6 +88,8 @@ class VLLMDeployment:
         else:
             assert isinstance(generator, ChatCompletionResponse)
             return JSONResponse(content=generator.model_dump())
+
+
 
 
 def parse_vllm_args(cli_args: Dict[str, str]):
